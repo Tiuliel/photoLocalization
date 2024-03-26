@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Button, TextInput, Image } from 'react-native';
-import { Camera } from 'expo-camera';
-import * as Location from 'expo-location';
+import React, { useState, useEffect } from "react";
+import { StyleSheet, View, Button, TextInput, Image } from "react-native";
+import { Camera } from "expo-camera";
+import * as Location from "expo-location";
+import MapView, { Marker } from "react-native-maps";
 
 export default function App() {
   const [temPermissaoCamera, setTemPermissaoCamera] = useState(null);
@@ -9,20 +10,20 @@ export default function App() {
   const [uriFoto, setUriFoto] = useState(null);
   const [localizacao, setLocalizacao] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [titulo, setTitulo] = useState('');
+  const [titulo, setTitulo] = useState("");
 
   useEffect(() => {
     (async () => {
       const { status } = await Camera.requestCameraPermissionsAsync();
-      setTemPermissaoCamera(status === 'granted');
+      setTemPermissaoCamera(status === "granted");
     })();
   }, []);
 
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setErrorMsg('Permissão para acessar a localização foi negada');
+      if (status !== "granted") {
+        setErrorMsg("Permissão para acessar a localização foi negada");
         return;
       }
 
@@ -43,18 +44,37 @@ export default function App() {
       <Camera
         style={estilos.camera}
         type={Camera.Constants.Type.back}
-        ref={ref => setCamera(ref)}
+        ref={(ref) => setCamera(ref)}
       />
       <Button title="Tirar Foto" onPress={tirarFoto} />
-      {uriFoto && <Image source={{ uri: uriFoto }} style={estilos.previewFoto} />}
-      <Text
+      {uriFoto && (
+        <Image source={{ uri: uriFoto }} style={estilos.previewFoto} />
+      )}
+      <TextInput
         style={estilos.titulo}
         placeholder="Digite o título"
-        onChangeText={text => setTitulo(text)}
+        onChangeText={(text) => setTitulo(text)}
         value={titulo}
       />
-      <Text>Latitude: {localizacao.coords.latitude}</Text>
-      <Text>Longitude: {localizacao.coords.longitude}</Text>
+      {localizacao && (
+        <MapView
+          style={estilos.map}
+          initialRegion={{
+            latitude: localizacao.coords.latitude,
+            longitude: localizacao.coords.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          }}
+        >
+          <Marker
+            coordinate={{
+              latitude: localizacao.coords.latitude,
+              longitude: localizacao.coords.longitude,
+            }}
+            title="Sua localização"
+          />
+        </MapView>
+      )}
     </View>
   );
 }
@@ -62,13 +82,13 @@ export default function App() {
 const estilos = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff',
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
   },
   camera: {
-    width: '100%',
-    height: '50%',
+    width: "100%",
+    height: "50%",
   },
   previewFoto: {
     width: 200,
@@ -77,10 +97,15 @@ const estilos = StyleSheet.create({
   },
   titulo: {
     height: 40,
-    width: '80%',
-    borderColor: 'gray',
+    width: "80%",
+    borderColor: "gray",
     borderWidth: 1,
     marginTop: 10,
     paddingHorizontal: 10,
+  },
+  map: {
+    marginTop: 20,
+    width: "80%",
+    height: "20%",
   },
 });
