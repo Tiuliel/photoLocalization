@@ -21,17 +21,10 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "package": "com.tiuliel.photolocalization"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "c613b026-cfac-41ef-a220-471be4771a7c"
-      }
-    },
-    "owner": "tiuliel"
+    }
   }
 }
