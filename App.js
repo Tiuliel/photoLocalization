@@ -1,81 +1,116 @@
-import React, { useState, useEffect } from "react";
-import { StyleSheet, View, Button, TextInput, Image } from "react-native";
-import { Camera } from "expo-camera";
-import * as Location from "expo-location";
+import { StatusBar } from "expo-status-bar";
+import {
+  Button,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { useEffect, useState } from "react";
+
+import * as ImagePicker from "expo-image-picker";
+import * as MediaLibrary from "expo-media-library";
+
 import MapView, { Marker } from "react-native-maps";
+import * as Location from "expo-location";
+
+import imagePlaceholder from "./assets/placeholder.png";
 
 export default function App() {
-  const [temPermissaoCamera, setTemPermissaoCamera] = useState(null);
-  const [camera, setCamera] = useState(null);
-  const [uriFoto, setUriFoto] = useState(null);
-  const [localizacao, setLocalizacao] = useState(null);
-  const [errorMsg, setErrorMsg] = useState(null);
-  const [titulo, setTitulo] = useState("");
+  const [foto, setFoto] = useState(null);
+
+  const [status, requestPermission] = ImagePicker.useCameraPermissions();
 
   useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setTemPermissaoCamera(status === "granted");
-    })();
+    async function verificaPermissoes() {
+      const cameraStatus = await ImagePicker.requestCameraPermissionsAsync();
+      requestPermission(cameraStatus === "granted");
+    }
+
+    verificaPermissoes();
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setErrorMsg("Permissão para acessar a localização foi negada");
-        return;
-      }
+  const acessarCamera = async () => {
+    const imagem = await ImagePicker.launchCameraAsync({
+      allowsEditing: false,
+      aspect: [16, 9],
+      quality: 0.5,
+    });
 
-      let localizacao = await Location.getCurrentPositionAsync({});
-      setLocalizacao(localizacao);
-    })();
-  }, []);
-
-  const tirarFoto = async () => {
-    if (camera) {
-      const dados = await camera.takePictureAsync();
-      setUriFoto(dados.uri);
+    if (!imagem.canceled) {
+      await MediaLibrary.saveToLibraryAsync(imagem.assets[0].uri);
+      setFoto(imagem.assets[0].uri);
     }
   };
 
+  const [minhaLocalizacao, setMinhaLocalizacao] = useState(null);
+
+  useEffect(() => {
+    async function obterLocalizacao() {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert("Ops!", "Você não autorizou o uso de geolocalização");
+        return;
+      }
+
+      let localizacaoAtual = await Location.getCurrentPositionAsync({});
+      setMinhaLocalizacao(localizacaoAtual);
+    }
+    obterLocalizacao();
+  }, []);
+
+  const [localizacao, setLocalizacao] = useState(null);
+
+  const regiaoInicialMapa = {
+    latitude: -23.533773,
+    longitude: -46.65529,
+    latitudeDelta: 20,
+    longitudeDelta: 20,
+  };
+
+  const marcarLocal = () => {
+    setLocalizacao({
+      latitude: minhaLocalizacao.coords.latitude,
+      longitude: minhaLocalizacao.coords.longitude,
+      latitudeDelta: 0.02,
+      longitudeDelta: 0.01,
+    });
+  };
+
   return (
-    <View style={estilos.container}>
-      <Camera
-        style={estilos.camera}
-        type={Camera.Constants.Type.back}
-        ref={(ref) => setCamera(ref)}
-      />
-      <Button title="Tirar Foto" onPress={tirarFoto} />
-      {uriFoto && (
-        <Image source={{ uri: uriFoto }} style={estilos.previewFoto} />
-      )}
-      <TextInput
-        style={estilos.titulo}
-        placeholder="Digite o título"
-        onChangeText={(text) => setTitulo(text)}
-        value={titulo}
-      />
-      {localizacao && (
-        <MapView
-          style={estilos.map}
-          initialRegion={{
-            latitude: localizacao.coords.latitude,
-            longitude: localizacao.coords.longitude,
-            latitudeDelta: 0.0922,
-            longitudeDelta: 0.0421,
-          }}
-        >
-          <Marker
-            coordinate={{
-              latitude: localizacao.coords.latitude,
-              longitude: localizacao.coords.longitude,
-            }}
-            title="Sua localização"
-          />
-        </MapView>
-      )}
-    </View>
+    <>
+      <StatusBar style="auto" />
+      <ScrollView>
+        <View style={estilos.container}>
+          <Text style={estilos.titulo}>PhotoLocalization</Text>
+          <View style={estilos.viewFoto}>
+            <TextInput style={estilos.input} placeholder="Legenda da foto" />
+            {foto ? (
+              <Image
+                source={{ uri: foto }}
+                style={{ width: 300, height: 168.75, marginBottom: 16 }}
+              />
+            ) : (
+              <Image source={imagePlaceholder} style={estilos.imagem} />
+            )}
+            <Button title="Tirar uma foto" onPress={acessarCamera} />
+          </View>
+          <View style={estilos.viewMapa}>
+            <MapView
+              mapType="hybrid"
+              style={estilos.mapa}
+              region={localizacao ?? regiaoInicialMapa}
+            >
+              {localizacao && <Marker coordinate={localizacao} />}
+            </MapView>
+            <Button title="Marcar a localização" onPress={marcarLocal} />
+          </View>
+        </View>
+      </ScrollView>
+    </>
   );
 }
 
@@ -83,29 +118,31 @@ const estilos = StyleSheet.create({
   container: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  camera: {
-    width: "100%",
-    height: "50%",
-  },
-  previewFoto: {
-    width: 200,
-    height: 200,
-    marginTop: 10,
   },
   titulo: {
-    height: 40,
-    width: "80%",
-    borderColor: "gray",
-    borderWidth: 1,
-    marginTop: 10,
-    paddingHorizontal: 10,
+    fontSize: 24,
+    marginTop: 50,
   },
-  map: {
-    marginTop: 20,
-    width: "80%",
-    height: "20%",
+  viewFoto: {
+    marginTop: 25,
+    marginBottom: 16,
+  },
+  input: {
+    width: 300,
+    borderColor: "#000",
+    borderWidth: 1,
+    padding: 8,
+    marginBottom: 16,
+  },
+  imagem: {
+    width: 300,
+    height: 168.75,
+    marginBottom: 16,
+  },
+  viewMapa: {},
+  mapa: {
+    width: 300,
+    height: 168.75,
+    marginBottom: 16,
   },
 });

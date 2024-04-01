@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "photoLocalization",
-    "slug": "photoLocalization",
+    "name": "localizar-fotoineitor",
+    "slug": "localizar-fotoineitor",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
